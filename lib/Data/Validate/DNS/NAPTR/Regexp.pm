@@ -1,6 +1,6 @@
 package Data::Validate::DNS::NAPTR::Regexp;
 
-our $VERSION = '0.001';
+our $VERSION = '0.002';
 
 use 5.008000;
 
@@ -102,8 +102,6 @@ sub is_naptr_regexp {
 	# digit, it must be followed by 3 digits with a total of less than 256 
 	# (ASCII). If it's not a digit, we just take it for what it is.
 
-	# In $replace, a null byte followed by a digit is a backref.
-
 	unless ($string =~ /^
 		(.*) (?<!\\) $delim
 		(.*) (?<!\\) $delim
@@ -139,8 +137,18 @@ sub is_naptr_regexp {
 		}
 	}
 
-	# Count backrefs in replace and make sure it matches up
-	my %brefs = map { $_ => 1 } $replace =~ /\0([0-9])/g;
+	# Count backrefs in replace and make sure it matches up.
+	# Since we're counting backrefs in the master-file format, \0 is our
+	# escape character (we converted literal escapes (\\\\) above).
+	# So now \0\0 is a literal '\', and \0\d is a backref. To count 
+	# backrefs, we have to kill off the literals first.
+
+	# I should switch to character parsing. It'd be more clear... -- alh
+	my $temp_replace = $replace;
+
+	$temp_replace =~ s/\0\0//g;
+
+	my %brefs = map { $_ => 1 } $temp_replace =~ /\0([0-9])/g;
 
 	# And so ends our fun with escapes. Convert those nulls back to double 
 	# backslashes
@@ -195,7 +203,7 @@ Data::Validate::DNS::NAPTR::Regexp - Validate the NAPTR Regexp field per RFC 291
 
 =head1 VERSION
 
-version 0.001
+version 0.002
 
 =head1 SYNOPSIS
 
