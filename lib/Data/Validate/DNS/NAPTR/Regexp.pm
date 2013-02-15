@@ -1,6 +1,6 @@
 package Data::Validate::DNS::NAPTR::Regexp;
 
-our $VERSION = '0.002';
+our $VERSION = '0.003';
 
 use 5.008000;
 
@@ -63,19 +63,29 @@ sub is_naptr_regexp {
 		$self = undef;
 
 		$last_error = undef;
+	} else {
+		$self->{error} = undef;
 	}
 
 	if (!defined $string) {
 		return 1;
 	}
 
-	if (length $string > 255) {
-		_set_error($self, "Must be less than 256 bytes");
+	if ($string =~ /\n/) {
+		_set_error($self, "Contains new-lines");
 
 		return 0;
 	}
 
-	if (!($string =~ s/^(.)//)) {
+	# Convert from master-file format
+	$string = _cstring_from_text($self, $string);
+
+	if (!defined $string) {
+		return 0;
+	}
+
+	# Empty string okay
+	if (length $string == 0) {
 		return 2;
 	}
 
@@ -84,6 +94,8 @@ sub is_naptr_regexp {
 
 		return 0;
 	}
+
+	$string =~ s/^(.)//;
 
 	my $delim = $1;
 
@@ -98,9 +110,8 @@ sub is_naptr_regexp {
 	# Convert double-backslashes to \0 for easy parsing.
 	$string =~ s/\\\\/\0/g;
 
-	# Now anything preceeded by a '\' is an escape sequence. If it's a 
-	# digit, it must be followed by 3 digits with a total of less than 256 
-	# (ASCII). If it's not a digit, we just take it for what it is.
+	# Now anything preceeded by a '\' is an escape sequence and can be 
+	# ignored.
 
 	unless ($string =~ /^
 		(.*) (?<!\\) $delim
@@ -121,34 +132,10 @@ sub is_naptr_regexp {
 
 			return 0;
 		}
-
-		my @escapes = $f =~ /\\(\d{1,3})/g;
-
-		for my $esc (@escapes) {
-			if (length($esc) != 3) {
-				_set_error($self, "Bad escape sequence '\\$esc'");
-
-				return 0;
-			} elsif ($esc > 255) {
-				_set_error($self, "Escape sequence out of range '\\$esc'");
-
-				return 0;
-			}
-		}
 	}
 
 	# Count backrefs in replace and make sure it matches up.
-	# Since we're counting backrefs in the master-file format, \0 is our
-	# escape character (we converted literal escapes (\\\\) above).
-	# So now \0\0 is a literal '\', and \0\d is a backref. To count 
-	# backrefs, we have to kill off the literals first.
-
-	# I should switch to character parsing. It'd be more clear... -- alh
-	my $temp_replace = $replace;
-
-	$temp_replace =~ s/\0\0//g;
-
-	my %brefs = map { $_ => 1 } $temp_replace =~ /\0([0-9])/g;
+	my %brefs = map { $_ => 1 } $replace=~ /\\([0-9])/g;
 
 	# And so ends our fun with escapes. Convert those nulls back to double 
 	# backslashes
@@ -194,6 +181,51 @@ sub is_naptr_regexp {
 	return 3;
 }
 
+# Convert master-file character string to data
+sub _cstring_from_text {
+	my ($self, $string) = @_;
+
+	my $ret;
+
+	# look for escape sequences, one at a time.
+	# $1 is data before escape, $2 is \ if found, $3 is what's escaped
+	while ($string =~ /\G(.*?)(\\(\d{1,3}|.)?)?/g) {
+		$ret .= $1;
+
+		# Got an escape
+		if ($2) {
+			my $seq = $3;
+
+			if (!defined $seq) {
+				_set_error($self, 'Trailing backslash');
+
+				return;
+			}
+
+			# Some byte? Take it
+			if ($seq !~ /\d/) {
+				$ret .= $seq;
+			} elsif ($seq !~ /\d\d\d/) {
+				_set_error($self, "Bad escape sequence '\\$seq'");
+
+				return;
+			} elsif ($seq > 255) {
+				_set_error($self, "Escape sequence out of range '\\$seq'");
+
+				return;
+			}
+		}
+	}
+
+	if (length $ret > 255) {
+		_set_error($self, "Must be less than 256 bytes");
+
+		return;
+	}
+
+	return $ret;
+}
+
 1;
 __END__
 
@@ -203,7 +235,7 @@ Data::Validate::DNS::NAPTR::Regexp - Validate the NAPTR Regexp field per RFC 291
 
 =head1 VERSION
 
-version 0.002
+version 0.003
 
 =head1 SYNOPSIS
 
@@ -211,7 +243,13 @@ Functional API (uses globals!!):
 
   use Data::Validate::DNS::NAPTR::Regexp;
 
-  my $regexp = '!test(something)!\\\\1!i';
+  # Using <<'EOF' to mirror master-file format exactly
+  my $regexp = <<'EOF';
+  !test(something)!\\1!i
+  EOF
+
+  # Kill newline
+  $regexp =~ s/\n//;
 
   if (is_naptr_regexp($regexp)) {
     print "Regexp '$regexp' is okay!"; 
@@ -228,7 +266,13 @@ Object API:
 
   my $v = Data::Validate::DNS::NAPTR::Regexp->new();
 
-  my $regexp = '!test(something)!\\\\1!i';
+  # Using <<'EOF' to mirror master-file format exactly
+  my $regexp = <<'EOF';
+  !test(something)!\\1!i
+  EOF
+
+  # Kill newline
+  $regexp =~ s/\n//;
 
   if ($v->is_naptr_regexp($regexp)) {
     print "Regexp '$regexp' is okay!";
@@ -251,7 +295,7 @@ BIND zone file.
 
 =head1 EXPORT
 
-By default, L</is_naptr_regexp> and L<naptr_regexp_error> will be exported. If 
+By default, L</is_naptr_regexp> and L</naptr_regexp_error> will be exported. If 
 you're using the L</OBJECT API>, importing an empty list is recommended.
 
 =head1 FUNCTIONAL API
@@ -302,6 +346,35 @@ See L</naptr_regexp_error> above.
   $v->error();
 
 See L</naptr_regexp_error> above.
+
+=head1 NOTES
+
+This lib validates the data in master-file format. In RFC 2915, there are 
+examples like: 
+
+  IN NAPTR 100   10   ""  ""  "/urn:cid:.+@([^\.]+\.)(.*)$/\2/i"    .
+
+To enter the above into a master-file, all backslashes must be escaped, and so 
+it would look like this:
+
+  IN NAPTR 100   10   ""  ""  "/urn:cid:.+@([^\\.]+\\.)(.*)$/\\2/i"    .
+
+To enter this manually into a Perl script and check it, you'd have to escape all 
+backslashes AGAIN:
+
+  my $regexp = '/urn:cid:.+@([^\\\\.]+\\\\.)(.*)$/\\\\2/i';
+
+Or, if you use a here doc, you can enter it just as you would if putting it in a 
+zone file (but you must clean up the newline):
+
+  my $regexp = <<'EOF';
+  /urn:cid:.+@([^\\.]+\\.)(.*)$/\\2/i
+  EOF
+
+  $regexp =~ s/\n//;
+
+The single-quote characters around "EOF" above are necessary or the backslashes 
+will be interpolated!
 
 =head1 SEE ALSO
 

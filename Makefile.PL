@@ -21,7 +21,7 @@ my %WriteMakefileArgs = (
   'PREREQ_PM' => {
     'ExtUtils::Constant' => '0.16'
   },
-  'VERSION' => '0.002',
+  'VERSION' => '0.003',
   'test' => {
     'TESTS' => 't/*.t'
   }
