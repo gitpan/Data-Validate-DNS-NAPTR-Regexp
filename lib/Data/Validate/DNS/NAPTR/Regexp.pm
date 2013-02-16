@@ -1,6 +1,6 @@
 package Data::Validate::DNS::NAPTR::Regexp;
 
-our $VERSION = '0.003';
+our $VERSION = '0.004';
 
 use 5.008000;
 
@@ -213,6 +213,9 @@ sub _cstring_from_text {
 				_set_error($self, "Escape sequence out of range '\\$seq'");
 
 				return;
+			} else {
+				# Good, take it
+				$ret .= chr($seq);
 			}
 		}
 	}
@@ -235,7 +238,7 @@ Data::Validate::DNS::NAPTR::Regexp - Validate the NAPTR Regexp field per RFC 291
 
 =head1 VERSION
 
-version 0.003
+version 0.004
 
 =head1 SYNOPSIS
 
