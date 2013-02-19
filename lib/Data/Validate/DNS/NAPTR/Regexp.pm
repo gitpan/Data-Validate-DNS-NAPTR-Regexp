@@ -1,6 +1,6 @@
 package Data::Validate::DNS::NAPTR::Regexp;
 
-our $VERSION = '0.004';
+our $VERSION = '0.005';
 
 use 5.008000;
 
@@ -190,7 +190,16 @@ sub _cstring_from_text {
 	# look for escape sequences, one at a time.
 	# $1 is data before escape, $2 is \ if found, $3 is what's escaped
 	while ($string =~ /\G(.*?)(\\(\d{1,3}|.)?)?/g) {
-		$ret .= $1;
+		my $before = $1;
+
+		# Unescaped double quote?
+		if ($before =~ /"/) {
+			_set_error($self, 'Unescaped double quote');
+
+			return;
+		}
+
+		$ret .= $before;
 
 		# Got an escape
 		if ($2) {
@@ -238,7 +247,7 @@ Data::Validate::DNS::NAPTR::Regexp - Validate the NAPTR Regexp field per RFC 291
 
 =head1 VERSION
 
-version 0.004
+version 0.005
 
 =head1 SYNOPSIS
 
