@@ -1,6 +1,6 @@
 package Data::Validate::DNS::NAPTR::Regexp;
 
-our $VERSION = '0.006';
+our $VERSION = '0.007';
 
 use 5.008000;
 
@@ -239,12 +239,11 @@ __END__
 
 =head1 NAME
 
+Data::Validate::DNS::NAPTR::Regexp - Validate the NAPTR Regexp field per RFC 2915 / RFC 3403 Section 4
 
 =head1 VERSION
 
-version 0.006
-Data::Validate::DNS::NAPTR::Regexp - Validate the NAPTR Regexp field per RFC 
-2915 / RFC 3403 Section 4
+version 0.007
 
 =head1 SYNOPSIS
 

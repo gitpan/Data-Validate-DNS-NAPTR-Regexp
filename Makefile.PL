@@ -9,7 +9,7 @@ use ExtUtils::MakeMaker 6.30;
 
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "Validate the NAPTR Regexp field per RFC \n2915 / RFC 3403 Section 4",
+  "ABSTRACT" => "Validate the NAPTR Regexp field per RFC 2915 / RFC 3403 Section 4",
   "AUTHOR" => "Matthew Horsfall (alh) <WolfSage\@gmail.com>",
   "BUILD_REQUIRES" => {
     "Test::More" => "0.88"
@@ -22,7 +22,7 @@ my %WriteMakefileArgs = (
   "LICENSE" => "perl",
   "NAME" => "Data::Validate::DNS::NAPTR::Regexp",
   "PREREQ_PM" => {},
-  "VERSION" => "0.006",
+  "VERSION" => "0.007",
   "test" => {
     "TESTS" => "t/*.t"
   }

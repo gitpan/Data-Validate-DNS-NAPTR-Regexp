@@ -1,4 +1,4 @@
-Data-Validate-NAPTR-Regexp version 0.006
+Data-Validate-NAPTR-Regexp version 0.007
 ========================================
 
 INSTALLATION
@@ -9,12 +9,6 @@ To install this module type the following:
    make
    make test
    make install
-
-DEPENDENCIES
-
-This module requires these other modules and libraries:
-
-  regex.h
 
 COPYRIGHT AND LICENCE
 
