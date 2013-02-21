@@ -1,14 +1,11 @@
 package Data::Validate::DNS::NAPTR::Regexp;
 
-our $VERSION = '0.005';
+our $VERSION = '0.006';
 
 use 5.008000;
 
 use strict;
 use warnings;
-
-require XSLoader;
-XSLoader::load('Data::Validate::DNS::NAPTR::Regexp', $VERSION);
 
 require Exporter;
 
@@ -17,9 +14,6 @@ our @ISA = qw(Exporter);
 our @EXPORT_OK = qw(is_naptr_regexp naptr_regexp_error);
 
 our @EXPORT = @EXPORT_OK;
-
-my $REG_EXTENDED = constant('REG_EXTENDED');
-my $REG_ICASE    = constant('REG_ICASE');
 
 my $last_error;
 
@@ -141,26 +135,15 @@ sub is_naptr_regexp {
 	# backslashes
 	$_ =~ s/\0/\\\\/g for ($find, $replace, $flags);
 
-	my $rflags = $REG_EXTENDED;
-
 	# Validate flags
 	for my $f (split //, $flags) {
 		if ($f eq 'i') {
-			$rflags |= $REG_ICASE;
+			# Ok!
 		} else {
 			_set_error($self, "Bad flag: $f");
 
 			return 0;
 		}
-	}
-
-	# Validate regex
-	my ($nsub, $err) = _regcomp($find, $rflags);
-
-	if (!defined $nsub) {
-		_set_error($self, "Bad regex: $err");
-
-		return 0;
 	}
 
 	if ($brefs{0}) {
@@ -169,10 +152,13 @@ sub is_naptr_regexp {
 		return 0;
 	}
 
+	# Validate capture count
+	my $nsubs = _count_nsubs($find);
+
 	my ($highest) = sort {$a <=> $b} keys %brefs;
 	$highest ||= 0;
 
-	if ($nsub < $highest) {
+	if ($nsubs < $highest) {
 		_set_error($self, "More backrefs in replacement than captures in match");
 
 		return 0;
@@ -238,16 +224,27 @@ sub _cstring_from_text {
 	return $ret;
 }
 
+# Count the number of captures in the RE
+sub _count_nsubs {
+	my ($regex) = @_;
+
+	# Assume any ( not preceded by a \ is a capture start
+	my @captures = $regex =~ /(?<!\\)\(/g;
+
+	return 0+@captures;
+}
+
 1;
 __END__
 
 =head1 NAME
 
-Data::Validate::DNS::NAPTR::Regexp - Validate the NAPTR Regexp field per RFC 2915
 
 =head1 VERSION
 
-version 0.005
+version 0.006
+Data::Validate::DNS::NAPTR::Regexp - Validate the NAPTR Regexp field per RFC 
+2915 / RFC 3403 Section 4
 
 =head1 SYNOPSIS
 
@@ -300,10 +297,13 @@ Object API:
 =head1 DESCRIPTION
 
 This module validates the Regexp field in the NAPTR DNS Resource Record as 
-defined by RFC 2915.
+defined by RFC 2915 / RFC 3403 Section 4.
 
 It assumes that the data is in master file format and suitable for use in a ISC 
 BIND zone file.
+
+It validates as much as possible, except the actual POSIX extended regular 
+expression.
 
 =head1 EXPORT
 
@@ -391,6 +391,8 @@ will be interpolated!
 =head1 SEE ALSO
 
 RFC 2915 - L<https://tools.ietf.org/html/rfc2915>
+
+RFC 3403 - Obsoletes RFC 2915 - L<https://tools.ietf.org/html/rfc3403>
 
 =head1 AUTHOR
 

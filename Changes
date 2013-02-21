@@ -1,3 +1,9 @@
+0.006 Thu, Feb 21, 2013
+
+  * Remove reliance on regcomp.h for portability
+
+  * Update docs to mention RFC 3403 (which obsoleted RFC 2915)
+
 0.005 Tue, Feb 19, 2013
 
   * Don't allow unescaped double quotes
